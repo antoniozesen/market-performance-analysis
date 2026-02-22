@@ -19,6 +19,16 @@ from src.reporting.html_builder import markdown_to_basic_html
 from src.reporting.narrative import generate_report_markdown
 
 st.set_page_config(page_title="Global Market Monitor", layout="wide")
+st.markdown(
+    """
+    <style>
+    .stApp { background-color: #f5f7fb; color: #111111; }
+    [data-testid="stSidebar"] { background-color: #ffffff; }
+    [data-testid="stMetricValue"] { color: #0b3d91; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 st.title("🌍 Global Market Monitor")
 st.caption("Cross-asset comparison, narrative reporting, and email delivery.")
 
@@ -152,12 +162,12 @@ with tab1:
         c4.metric("Median Volatility", f"{summary['Volatility %'].median():.2f}%")
         c5.metric("Worst Max DD", f"{summary['Max Drawdown %'].min():.2f}%")
 
-        bar = px.bar(summary.reset_index(), x="index", y="Total Return %", color="Total Return %", title="Total Return by Asset")
+        bar = px.bar(summary.reset_index(), x="index", y="Total Return %", color="Total Return %", title="Total Return by Asset", template="plotly_white")
         bar.update_layout(xaxis_title="Asset", yaxis_title="Return %")
         st.plotly_chart(bar, use_container_width=True)
 
         if not corr.empty:
-            heat = px.imshow(corr, text_auto=".2f", aspect="auto", title="Correlation Matrix (Daily Returns)")
+            heat = px.imshow(corr, text_auto=".2f", aspect="auto", title="Correlation Matrix (Daily Returns)", template="plotly_white")
             st.plotly_chart(heat, use_container_width=True)
 
         display_summary = summary.reset_index().rename(columns={"index": "Asset"})
@@ -200,14 +210,14 @@ with tab2:
         single_asset = st.selectbox("Single-asset detail", options=list(prices.columns))
         col1, col2 = st.columns(2)
         with col1:
-            st.plotly_chart(px.line(prices[[single_asset]], title=f"{single_asset} Price"), use_container_width=True)
+            st.plotly_chart(px.line(prices[[single_asset]], title=f"{single_asset} Price", template="plotly_white"), use_container_width=True)
         with col2:
-            st.plotly_chart(px.line(drawdowns[[single_asset]] * 100, title=f"{single_asset} Drawdown %"), use_container_width=True)
+            st.plotly_chart(px.line(drawdowns[[single_asset]] * 100, title=f"{single_asset} Drawdown %", template="plotly_white"), use_container_width=True)
 
         if st.toggle("Show rolling 20D volatility", value=False):
-            st.plotly_chart(px.line(roll_vol * 100, title="Rolling 20D Volatility (Annualized, %)"), use_container_width=True)
+            st.plotly_chart(px.line(roll_vol * 100, title="Rolling 20D Volatility (Annualized, %)", template="plotly_white"), use_container_width=True)
 
-        st.plotly_chart(px.line(drawdowns * 100, title="Drawdown Comparison (%)"), use_container_width=True)
+        st.plotly_chart(px.line(drawdowns * 100, title="Drawdown Comparison (%)", template="plotly_white"), use_container_width=True)
 
 with tab3:
     style = st.selectbox("Style", ["English", "Spanish"], index=0)

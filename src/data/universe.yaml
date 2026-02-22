@@ -22,8 +22,8 @@ EU SECTORS:
   EU Financials: "ESIF.L"
   EU Materials: "EXV6.DE"
   EU Health Care: "HLTH.L"
-  EU Energy: "ESIE.F"
-  EU Consumer Staples: "ESIS.F"
+  EU Energy: ["SXEP.Z", "2KOK.Z", "ESIE.F"]
+  EU Consumer Staples: ["XFJT.Z", "3MFX.Z", "ESIS.F", "SX3P.Z"]
   EU Industrials: "ESIN.L"
   EU Technology: "EXV3.DE"
   EU Consumer Discretionary: "ESIC.F"
