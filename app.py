@@ -22,9 +22,15 @@ st.set_page_config(page_title="Global Market Monitor", layout="wide")
 st.markdown(
     """
     <style>
-    .stApp { background-color: #f5f7fb; color: #111111; }
-    [data-testid="stSidebar"] { background-color: #ffffff; }
-    [data-testid="stMetricValue"] { color: #0b3d91; }
+    .stApp { background: #ffffff !important; color: #111111 !important; }
+    .main .block-container { background: #ffffff !important; }
+    [data-testid="stSidebar"] { background: #fbfbfc !important; border-right: 1px solid #efefef; }
+    [data-testid="stHeader"] { background: #ffffff !important; }
+    [data-testid="stMetric"] { background: #ffffff; border: 1px solid #f0f0f0; border-radius: 12px; padding: 8px 10px; }
+    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #111111 !important; }
+    [data-baseweb="select"], [data-baseweb="input"] input, textarea { background: #ffffff !important; color: #111111 !important; }
+    .stTabs [data-baseweb="tab"] { color: #1c1c1c !important; }
+    .stDataFrame, .stTable { background: #ffffff !important; }
     </style>
     """,
     unsafe_allow_html=True,

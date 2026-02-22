@@ -28,8 +28,8 @@ def markdown_to_basic_html(
 
     lines = markdown_text.splitlines()
     out = [
-        "<html><body style='font-family:Arial,sans-serif;line-height:1.6;color:#333;max-width:960px;margin:0 auto;padding:20px;'>",
-        "<div style='color:#0000EB;font-size:28px;text-align:center;margin-bottom:24px;font-weight:700;'>GLOBAL MARKET UPDATE</div>",
+        "<html><body style='font-family:Arial,sans-serif;line-height:1.6;color:#1f1f1f;background:#ffffff;max-width:960px;margin:0 auto;padding:20px;'>",
+        "<div style='background:#ffffff;color:#1f1f1f;font-size:28px;text-align:center;margin-bottom:24px;font-weight:700;'>GLOBAL MARKET UPDATE</div>",
     ]
 
     for line in lines:
@@ -37,7 +37,7 @@ def markdown_to_basic_html(
             continue
         if line.startswith("## "):
             out.append(
-                f"<h2 style='color:#0000EB;font-size:20px;margin-top:26px;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #ccc;'>{html.escape(line[3:])}</h2>"
+                f"<h2 style='color:#1f1f1f;font-size:20px;margin-top:26px;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #ccc;'>{html.escape(line[3:])}</h2>"
             )
             continue
         if line.startswith("- "):
@@ -49,7 +49,7 @@ def markdown_to_basic_html(
         out.append(f"<p style='margin-bottom:12px;text-align:justify;'>{_highlight_assets(line, asset_names)}</p>")
 
     if summary_df is not None and not summary_df.empty:
-        out.append("<h2 style='color:#0000EB;font-size:20px;margin-top:26px;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #ccc;'>PERFORMANCE SUMMARY</h2>")
+        out.append("<h2 style='color:#1f1f1f;font-size:20px;margin-top:26px;margin-bottom:12px;padding-bottom:5px;border-bottom:1px solid #ccc;'>PERFORMANCE SUMMARY</h2>")
         out.append(_performance_table_html(summary_df, universe))
 
     out.append(
@@ -98,7 +98,7 @@ def _remove_redundant_adverbs(text: str) -> str:
 def _performance_table_html(summary_df: pd.DataFrame, universe: Dict[str, Dict[str, str]]) -> str:
     html_rows = [
         "<table style='width:100%;border-collapse:collapse;margin:18px 0;font-size:14px;'>",
-        "<tr><th style='background:#0000EB;color:#fff;text-align:left;padding:10px;'>Index/Asset</th><th style='background:#0000EB;color:#fff;text-align:right;padding:10px;'>Change (%)</th><th style='background:#0000EB;color:#fff;text-align:right;padding:10px;'>Vol (%)</th><th style='background:#0000EB;color:#fff;text-align:right;padding:10px;'>Max DD (%)</th></tr>",
+        "<tr><th style='background:#f5f5f7;color:#111;text-align:left;padding:10px;border:1px solid #ddd;'>Index/Asset</th><th style='background:#f5f5f7;color:#111;text-align:right;padding:10px;border:1px solid #ddd;'>Change (%)</th><th style='background:#f5f5f7;color:#111;text-align:right;padding:10px;border:1px solid #ddd;'>Vol (%)</th><th style='background:#f5f5f7;color:#111;text-align:right;padding:10px;border:1px solid #ddd;'>Max DD (%)</th></tr>",
     ]
 
     for cat in CATEGORY_ORDER:
