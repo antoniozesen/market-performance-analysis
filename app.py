@@ -19,130 +19,18 @@ from src.reporting.html_builder import markdown_to_basic_html
 from src.reporting.narrative import generate_report_markdown
 
 st.set_page_config(page_title="Global Market Monitor", layout="wide")
-st.markdown(
-    """
-    <style>
-    :root {
-      --bg-main: #ffffff;
-      --bg-soft: #fcfcfd;
-      --bg-soft-2: #f7f8fa;
-      --text-main: #111827;
-      --text-muted: #374151;
-      --border-soft: #e5e7eb;
-    }
-
-    .stApp {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-    }
-
-    .main .block-container {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-    }
-
-    [data-testid="stAppViewContainer"],
-    [data-testid="stMain"],
-    [data-testid="stMainBlockContainer"] {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-    }
-
-    [data-testid="stExpander"],
-    [data-testid="stForm"],
-    [data-testid="stAlert"],
-    [data-testid="stNotificationContentInfo"],
-    [data-testid="stNotificationContentSuccess"],
-    [data-testid="stNotificationContentWarning"],
-    [data-testid="stNotificationContentError"] {
-      background: var(--bg-soft) !important;
-      color: var(--text-main) !important;
-      border-color: var(--border-soft) !important;
-    }
-
-    .stMarkdown, .stMarkdown p, .stMarkdown li, .stCaption {
-      color: var(--text-main) !important;
-    }
-
-    pre, code {
-      background: #f8fafc !important;
-      color: #0f172a !important;
-    }
-
-    [data-testid="stHeader"] {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-    }
-
-    [data-testid="stSidebar"] {
-      background: var(--bg-soft) !important;
-      border-right: 1px solid var(--border-soft);
-      color: var(--text-main) !important;
-    }
-
-    h1, h2, h3, h4, h5, h6, p, span, label, div {
-      color: var(--text-main);
-    }
-
-    [data-testid="stMetric"] {
-      background: var(--bg-soft) !important;
-      border: 1px solid var(--border-soft) !important;
-      border-radius: 12px;
-      padding: 8px 10px;
-    }
-
-    [data-testid="stMetricLabel"],
-    [data-testid="stMetricValue"],
-    [data-testid="stMetricDelta"] {
-      color: var(--text-main) !important;
-    }
-
-    [data-baseweb="input"],
-    [data-baseweb="select"],
-    [data-baseweb="textarea"],
-    textarea,
-    input {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-      border-color: var(--border-soft) !important;
-    }
-
-    .stTabs [data-baseweb="tab-list"] {
-      background: var(--bg-soft-2) !important;
-      border-radius: 10px;
-      padding: 4px;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-      color: var(--text-muted) !important;
-      background: transparent !important;
-    }
-
-    .stTabs [aria-selected="true"] {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-      border-radius: 8px;
-    }
-
-    .stDataFrame, .stTable {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-    }
-
-    button[kind="secondary"] {
-      background: var(--bg-main) !important;
-      color: var(--text-main) !important;
-      border: 1px solid var(--border-soft) !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
 st.title("🌍 Global Market Monitor")
-st.caption("Cross-asset comparison, narrative reporting, and email delivery.")
+st.caption("Cross-asset comparison + narrative report + email.")
 
-universe = load_universe()
-all_categories = ["INDICES", "EU SECTORS", "US SECTORS", "CURRENCIES", "COMMODITIES", "BOND ETFs", "STYLE ETFs", "YIELDS"]
+CATS = ["INDICES", "STYLE ETFs", "EU SECTORS", "US SECTORS", "CURRENCIES", "COMMODITIES", "BOND ETFs", "YIELDS"]
+
+
+def secret_get(key: str, default=None):
+    try:
+        return st.secrets.get(key, default)
+    except Exception:
+        return default
+
 
 def cumulative_return_pct(prices_df: pd.DataFrame) -> pd.DataFrame:
     if prices_df.empty:
@@ -151,93 +39,65 @@ def cumulative_return_pct(prices_df: pd.DataFrame) -> pd.DataFrame:
     return prices_df.divide(base).subtract(1.0).multiply(100)
 
 
-def build_return_chart_with_dynamic_axes(ret_panel: pd.DataFrame) -> go.Figure:
-    fig = go.Figure()
-    if ret_panel.empty:
-        return fig
-
-    final_abs = ret_panel.ffill().iloc[-1].abs().sort_values(ascending=False)
-    high_dispersion = final_abs.iloc[0] >= 3 * max(final_abs.median(), 1.0) and final_abs.iloc[0] >= 40
-    secondary_names = set(final_abs.head(max(1, len(final_abs) // 3)).index) if high_dispersion else set()
-
-    for col in ret_panel.columns:
-        use_secondary = col in secondary_names
-        fig.add_trace(
-            go.Scatter(
-                x=ret_panel.index,
-                y=ret_panel[col],
-                mode="lines",
-                name=col + (" (RHS)" if use_secondary else ""),
-                yaxis="y2" if use_secondary else "y",
-            )
-        )
-
-    layout = {
-        "title": "Cumulative Performance (%)",
-        "xaxis": {"title": "Date"},
-        "yaxis": {"title": "Return %"},
-        "legend": {"orientation": "h", "y": 1.06},
-    }
-    if high_dispersion:
-        layout["yaxis2"] = {"title": "Return % (RHS)", "overlaying": "y", "side": "right", "showgrid": False}
-    fig.update_layout(**layout)
-    return fig
-
-
 def preset_dates(preset: str) -> tuple[date, date]:
     today = date.today()
-    if preset == "MTD":
-        return today.replace(day=1), today
-    if preset == "1M":
-        return today - timedelta(days=30), today
-    if preset == "3M":
-        return today - timedelta(days=90), today
-    if preset == "YTD":
-        return today.replace(month=1, day=1), today
-    if preset == "1Y":
-        return today - timedelta(days=365), today
-    return today - timedelta(days=90), today
+    return {
+        "MTD": (today.replace(day=1), today),
+        "1M": (today - timedelta(days=30), today),
+        "3M": (today - timedelta(days=90), today),
+        "YTD": (today.replace(month=1, day=1), today),
+        "1Y": (today - timedelta(days=365), today),
+    }.get(preset, (today - timedelta(days=90), today))
 
 
+def autoscale_groups(ret_pct: pd.DataFrame, threshold: float = 120.0) -> tuple[list[str], list[str]]:
+    if ret_pct.empty:
+        return [], []
+    last_abs = ret_pct.ffill().iloc[-1].abs().sort_values(ascending=False)
+    if len(last_abs) < 2 or (last_abs.iloc[0] - last_abs.iloc[1]) <= threshold:
+        return list(ret_pct.columns), []
+    split_count = max(1, len(last_abs) // 4)
+    outliers = list(last_abs.head(split_count).index)
+    main = [c for c in ret_pct.columns if c not in outliers]
+    return main, outliers
+
+
+universe = load_universe()
 with st.sidebar:
     st.header("Controls")
-    preset = st.selectbox("Quick preset", ["3M", "MTD", "1M", "YTD", "1Y", "Custom"], index=0)
+    preset = st.selectbox("Quick preset", ["MTD", "1M", "3M", "YTD", "1Y", "Custom"], index=2)
     ps, pe = preset_dates(preset)
-    default_start = ps if preset != "Custom" else date.today() - timedelta(days=90)
-    start_date = st.date_input("Start date", value=default_start)
+    start_date = st.date_input("Start date", value=ps)
     end_date = st.date_input("End date", value=pe)
-
     if start_date >= end_date:
-        st.error("Start date must be before end date.")
+        st.error("Start date must be before end date")
         st.stop()
 
-    selected_categories = st.multiselect("Categories", options=all_categories, default=["INDICES", "EU SECTORS", "US SECTORS"])
-
-    assets_by_category: Dict[str, List[str]] = {}
+    selected_categories = st.multiselect("Categories", options=CATS, default=["INDICES", "EU SECTORS", "US SECTORS"])
+    selection: Dict[str, List[str]] = {}
     for cat in selected_categories:
         labels = list(universe.get(cat, {}).keys())
-        assets_by_category[cat] = st.multiselect(f"Assets in {cat}", labels, default=labels[: min(8, len(labels))])
+        selection[cat] = st.multiselect(f"Assets in {cat}", labels, default=labels[: min(8, len(labels))])
 
-    custom_csv = st.text_input("Custom yfinance tickers (CSV)", placeholder="AAPL,MSFT,EWJ")
-    chart_mode = st.radio("Chart mode", ["Normalized (Base 100)", "Absolute Prices"], index=0)
-    returns_basis = st.radio("Returns basis", ["Adj Close", "Close"], index=0)
-    st.selectbox("Frequency", ["Daily"], index=0)
+    custom_csv = st.text_input("Custom yfinance tickers (CSV)", placeholder="AAPL,MSFT")
+    chart_mode = st.radio("Chart mode", ["Cumulative return %", "Normalized price index (start=100)", "Absolute prices"], index=0)
+    prefer_adj = st.toggle("Use Adj Close (fallback Close)", value=True)
     forward_fill = st.toggle("Forward-fill missing data", value=True)
+    auto_scale = st.toggle("Auto-scale handling", value=True)
+    log_scale = st.toggle("Log scale (normalized/absolute only)", value=False)
 
-label_to_ticker = {}
-fred_map = {}
-for cat, selected_labels in assets_by_category.items():
-    for label in selected_labels:
-        ticker = universe.get(cat, {}).get(label)
-        if ticker:
-            if cat == "YIELDS":
-                fred_map[label] = ticker
-            else:
-                label_to_ticker[label] = ticker
+label_to_tickers: Dict[str, List[str]] = {}
+fred_map: Dict[str, List[str]] = {}
+for cat, labels in selection.items():
+    for label in labels:
+        tickers = universe.get(cat, {}).get(label, [])
+        if cat == "YIELDS":
+            fred_map[label] = tickers
+        else:
+            label_to_tickers[label] = tickers
+label_to_tickers.update(parse_custom_tickers(custom_csv))
 
-label_to_ticker.update(parse_custom_tickers(custom_csv))
-
-price_res = fetch_prices(label_to_ticker, start_date, end_date, prefer_adj_close=(returns_basis == "Adj Close"))
+price_res = fetch_prices(label_to_tickers, start_date, end_date, prefer_adj_close=prefer_adj)
 prices = align_panel(price_res.prices, start_date, end_date, forward_fill=forward_fill)
 returns = compute_returns(prices)
 summary = performance_summary(prices, returns)
@@ -245,177 +105,140 @@ corr = correlation_matrix(returns)
 drawdowns = drawdown_from_prices(prices)
 normalized = normalize_base_100(prices)
 roll_vol = rolling_volatility(returns, window=20)
-return_pct = cumulative_return_pct(prices)
+ret_pct = cumulative_return_pct(prices)
 
-fred_key = st.secrets.get("FRED_API_KEY", None)
+fred_key = secret_get("FRED_API_KEY", None)
 yields = fetch_fred_series(fred_map, start_date, end_date, fred_key)
 if not yields.empty and {"US 2Y Yield", "US 10Y Yield"}.issubset(yields.columns):
-    yields["US 2s10s Slope (bps)"] = (yields["US 10Y Yield"] - yields["US 2Y Yield"]) * 100
+    yields["US 2s10s slope (bps)"] = (yields["US 10Y Yield"] - yields["US 2Y Yield"]) * 100
 
 if price_res.failed:
-    st.warning(f"Some tickers failed and were skipped: {', '.join(price_res.failed)}")
-if prices.empty:
-    st.error("No price data available for the selection.")
+    st.warning(f"Skipped assets with no usable data: {', '.join(price_res.failed)}")
+if price_res.resolved:
+    with st.expander("Resolved tickers"):
+        st.json(price_res.resolved)
 
 spread_proxy = compute_spread_proxies(summary)
-
 
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["Overview", "Charts", "Report Builder", "Email", "Settings / About"])
 
 with tab1:
     if not summary.empty:
         c1, c2, c3, c4, c5 = st.columns(5)
-        c1.metric("Best Performer", summary.index[0], f"{summary.iloc[0]['Total Return %']:.2f}%")
-        c2.metric("Worst Performer", summary.index[-1], f"{summary.iloc[-1]['Total Return %']:.2f}%")
-        c3.metric("Average Return", f"{summary['Total Return %'].mean():.2f}%")
-        c4.metric("Median Volatility", f"{summary['Volatility %'].median():.2f}%")
-        c5.metric("Worst Max DD", f"{summary['Max Drawdown %'].min():.2f}%")
+        c1.metric("Best performer", summary.index[0], f"{summary.iloc[0]['Total Return %']:.2f}%")
+        c2.metric("Worst performer", summary.index[-1], f"{summary.iloc[-1]['Total Return %']:.2f}%")
+        c3.metric("Average return", f"{summary['Total Return %'].mean():.2f}%")
+        c4.metric("Median vol", f"{summary['Volatility %'].median():.2f}%")
+        c5.metric("Worst max drawdown", f"{summary['Max Drawdown %'].min():.2f}%")
 
-        bar = px.bar(summary.reset_index(), x="index", y="Total Return %", color="Total Return %", title="Total Return by Asset", template="plotly_white")
-        bar.update_layout(xaxis_title="Asset", yaxis_title="Return %")
-        st.plotly_chart(bar, use_container_width=True)
-
+        st.plotly_chart(px.bar(summary.reset_index(), x="index", y="Total Return %", color="Total Return %", title="Total returns"), use_container_width=True)
         if not corr.empty:
-            heat = px.imshow(corr, text_auto=".2f", aspect="auto", title="Correlation Matrix (Daily Returns)", template="plotly_white")
-            st.plotly_chart(heat, use_container_width=True)
+            st.plotly_chart(px.imshow(corr, text_auto=".2f", title="Correlation matrix"), use_container_width=True)
+        st.dataframe(summary.style.format("{:.2f}"), use_container_width=True)
 
-        display_summary = summary.reset_index().rename(columns={"index": "Asset"})
-        st.dataframe(
-            display_summary,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Total Return %": st.column_config.NumberColumn("Total Return %", format="%.2f"),
-                "Annualized Return %": st.column_config.NumberColumn("Annualized Return %", format="%.2f"),
-                "Volatility %": st.column_config.NumberColumn("Volatility %", format="%.2f"),
-                "Max Drawdown %": st.column_config.NumberColumn("Max Drawdown %", format="%.2f"),
-                "Best Day %": st.column_config.NumberColumn("Best Day %", format="%.2f"),
-                "Worst Day %": st.column_config.NumberColumn("Worst Day %", format="%.2f"),
-            },
-        )
-
+        st.download_button("Download summary table CSV", data=summary.to_csv().encode(), file_name="summary.csv")
+        st.download_button("Download aligned panel CSV", data=prices.to_csv().encode(), file_name="aligned_panel.csv")
         if not spread_proxy.empty:
-            st.caption("Credit spread change proxies using ETF total-return differentials.")
-            st.dataframe(spread_proxy.reset_index().rename(columns={"index": "Proxy"}), use_container_width=True, hide_index=True, column_config={"Value": st.column_config.NumberColumn("Value", format="%.2f")})
-
-        st.download_button("Download summary CSV", data=summary.to_csv().encode("utf-8"), file_name="summary.csv")
-        st.download_button("Download aligned prices CSV", data=prices.to_csv().encode("utf-8"), file_name="prices_panel.csv")
+            st.caption("Spread-change proxy via ETF return differentials.")
+            st.dataframe(spread_proxy.style.format("{:.2f}"), use_container_width=True)
 
 with tab2:
-    if not prices.empty:
-        if chart_mode.startswith("Normalized"):
-            fig = build_return_chart_with_dynamic_axes(return_pct)
-            st.plotly_chart(fig, use_container_width=True)
-            if "yaxis2" in fig.layout:
-                st.info("High return dispersion detected. Top-magnitude assets are shown on a secondary axis to preserve visibility.")
+    if prices.empty:
+        st.info("No chart data for this selection.")
+    else:
+        panel = ret_pct if chart_mode == "Cumulative return %" else normalized if chart_mode.startswith("Normalized") else prices
+        y_title = "Return %" if chart_mode == "Cumulative return %" else "Index (start=100)" if chart_mode.startswith("Normalized") else "Price"
+
+        if auto_scale and chart_mode == "Cumulative return %":
+            main, outliers = autoscale_groups(panel)
+            if outliers:
+                st.warning("Auto-scale active: assets split into two charts due to extreme dispersion.")
+            for title, cols in [("Main group", main), ("Outliers", outliers)]:
+                if cols:
+                    fig = go.Figure()
+                    for col in cols:
+                        fig.add_trace(go.Scatter(x=panel.index, y=panel[col], name=col, mode="lines"))
+                    fig.update_layout(title=f"{chart_mode} - {title}", yaxis_title=y_title)
+                    st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("Absolute prices can distort multi-asset comparison due to scale differences. Prefer normalized/percentage view for cross-asset analysis.")
             fig = go.Figure()
-            for col in prices.columns:
-                fig.add_trace(go.Scatter(x=prices.index, y=prices[col], mode="lines", name=col))
-            fig.update_layout(title="Absolute Price Comparison", yaxis_title="Price")
+            for col in panel.columns:
+                fig.add_trace(go.Scatter(x=panel.index, y=panel[col], name=col, mode="lines"))
+            if log_scale and chart_mode != "Cumulative return %":
+                fig.update_yaxes(type="log")
+            fig.update_layout(title=chart_mode, yaxis_title=y_title)
             st.plotly_chart(fig, use_container_width=True)
 
-        single_asset = st.selectbox("Single-asset detail", options=list(prices.columns))
-        col1, col2 = st.columns(2)
-        with col1:
-            st.plotly_chart(px.line(prices[[single_asset]], title=f"{single_asset} Price", template="plotly_white"), use_container_width=True)
-        with col2:
-            st.plotly_chart(px.line(drawdowns[[single_asset]] * 100, title=f"{single_asset} Drawdown %", template="plotly_white"), use_container_width=True)
-
-        if st.toggle("Show rolling 20D volatility", value=False):
-            st.plotly_chart(px.line(roll_vol * 100, title="Rolling 20D Volatility (Annualized, %)", template="plotly_white"), use_container_width=True)
-
-        st.plotly_chart(px.line(drawdowns * 100, title="Drawdown Comparison (%)", template="plotly_white"), use_container_width=True)
+        single = st.selectbox("Single-asset drilldown", list(prices.columns))
+        st.plotly_chart(px.line(prices[[single]], title=f"{single} price"), use_container_width=True)
+        st.plotly_chart(px.line(drawdowns[[single]] * 100, title=f"{single} drawdown %"), use_container_width=True)
+        if st.toggle("Show rolling volatility (20D)", value=False):
+            st.plotly_chart(px.line(roll_vol[[single]] * 100, title=f"{single} rolling vol %"), use_container_width=True)
 
 with tab3:
     style = st.selectbox("Style", ["English", "Spanish"], index=0)
     if "report_md" not in st.session_state:
         st.session_state.report_md = generate_report_markdown(start_date, end_date, summary, yields, universe, style)
 
-    col_a, col_b = st.columns(2)
-    if col_a.button("Regenerate"):
+    c1, c2 = st.columns(2)
+    if c1.button("Regenerate"):
         st.session_state.report_md = generate_report_markdown(start_date, end_date, summary, yields, universe, style)
-    if col_b.button("Reset"):
+    if c2.button("Reset"):
         st.session_state.report_md = ""
 
-    st.session_state.report_md = st.text_area("Editable Markdown report", value=st.session_state.report_md, height=500)
-    html_report = markdown_to_basic_html(st.session_state.report_md, summary_df=summary, universe=universe)
-    st.session_state.report_html = html_report
-    with st.expander("HTML Preview"):
-        st.components.v1.html(html_report, height=400, scrolling=True)
+    st.session_state.report_md = st.text_area("Editable report (Markdown)", st.session_state.report_md, height=500)
+    st.session_state.report_html = markdown_to_basic_html(st.session_state.report_md, summary_df=summary, universe=universe)
+    st.components.v1.html(st.session_state.report_html, height=350, scrolling=True)
 
 with tab4:
-    st.subheader("Email Delivery")
-    recipients_default = st.secrets.get("DEFAULT_RECIPIENTS", "")
-    recipients_text = st.text_input("Recipients (comma-separated)", value=recipients_default)
-    subject_default = f"Global Market Monitor | {start_date:%Y-%m-%d} to {end_date:%Y-%m-%d}"
-    subject = st.text_input("Subject", value=subject_default)
+    st.subheader("Email")
+    recipients_text = st.text_input("Recipients", secret_get("DEFAULT_RECIPIENTS", ""))
+    subject = st.text_input("Subject", f"Global Market Monitor | {start_date} to {end_date}")
     send_html = st.checkbox("Send as HTML", value=True)
-
-    preview_html = st.session_state.get("report_html", "<p>No report generated yet.</p>")
-    st.caption("Email body preview")
-    st.components.v1.html(preview_html, height=300, scrolling=True)
+    body_html = st.session_state.get("report_html", "<p>No report generated.</p>")
+    st.components.v1.html(body_html, height=280, scrolling=True)
 
     if st.button("Send email"):
-        smtp_host = st.secrets.get("SMTP_HOST")
-        smtp_port = st.secrets.get("SMTP_PORT")
-        smtp_user = st.secrets.get("SMTP_USERNAME")
-        smtp_pass = st.secrets.get("SMTP_PASSWORD")
-        smtp_sender = st.secrets.get("SMTP_SENDER")
-        smtp_use_tls = bool(st.secrets.get("SMTP_USE_TLS", True))
-
-        missing = [
-            k
-            for k, v in {
-                "SMTP_HOST": smtp_host,
-                "SMTP_PORT": smtp_port,
-                "SMTP_USERNAME": smtp_user,
-                "SMTP_PASSWORD": smtp_pass,
-                "SMTP_SENDER": smtp_sender,
-            }.items()
-            if v in (None, "")
-        ]
+        keys = ["SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_SENDER"]
+        cfg = {k: secret_get(k) for k in keys}
+        missing = [k for k, v in cfg.items() if not v]
         if missing:
-            st.info("SMTP is not fully configured. Please add required keys in Streamlit secrets.")
+            st.info("SMTP is not fully configured in Streamlit secrets.")
         else:
             recipients = [r.strip() for r in recipients_text.split(",") if r.strip()]
             if not recipients:
-                st.warning("Please provide at least one recipient.")
+                st.warning("Please enter at least one recipient.")
             else:
                 try:
                     send_email(
-                        smtp_host=smtp_host,
-                        smtp_port=int(smtp_port),
-                        username=smtp_user,
-                        password=smtp_pass,
-                        sender=smtp_sender,
+                        smtp_host=str(cfg["SMTP_HOST"]),
+                        smtp_port=int(cfg["SMTP_PORT"]),
+                        username=str(cfg["SMTP_USERNAME"]),
+                        password=str(cfg["SMTP_PASSWORD"]),
+                        sender=str(cfg["SMTP_SENDER"]),
                         recipients=recipients,
                         subject=subject,
                         body_text=st.session_state.get("report_md", ""),
-                        body_html=preview_html if send_html else None,
-                        use_tls=smtp_use_tls,
+                        body_html=body_html if send_html else None,
+                        use_tls=bool(secret_get("SMTP_USE_TLS", True)),
                     )
                     st.success("Email sent successfully.")
                 except Exception:
-                    st.error("Email failed to send. Please verify SMTP settings and recipient list.")
+                    st.error("Email failed to send. Please verify SMTP settings.")
 
 with tab5:
     st.markdown(
         """
 ### Data Sources
-- **yfinance** for market prices (daily history).
-- **FRED** (fredapi) for macro yield series (optional if API key is available).
+- yfinance (daily history)
+- FRED via fredapi (optional)
 
 ### Limitations
-- Non-trading days can create gaps; optional forward-fill can smooth alignment.
-- Bond and credit spread analysis includes ETF return-based proxies, not direct spread/OAS calculations.
-- Data quality depends on external free providers.
+- Non-trading days and symbol quirks can produce gaps.
+- Some spread measures are ETF-return proxies, not true OAS.
+- Ticker resolver uses fallback lists from `universe.yaml`.
 
 ### Version
-- **v1.0.0**
-
-### Changelog
-- Initial public release with comparison dashboards, report builder, and SMTP email workflow.
+v1.1.0
 """
     )
