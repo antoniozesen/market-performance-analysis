@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from typing import Dict, List
 
 import pandas as pd
@@ -24,6 +24,45 @@ st.caption("Cross-asset comparison, narrative reporting, and email delivery.")
 
 universe = load_universe()
 all_categories = ["INDICES", "EU SECTORS", "US SECTORS", "CURRENCIES", "COMMODITIES", "BOND ETFs", "STYLE ETFs", "YIELDS"]
+
+def cumulative_return_pct(prices_df: pd.DataFrame) -> pd.DataFrame:
+    if prices_df.empty:
+        return prices_df
+    base = prices_df.ffill().bfill().iloc[0]
+    return prices_df.divide(base).subtract(1.0).multiply(100)
+
+
+def build_return_chart_with_dynamic_axes(ret_panel: pd.DataFrame) -> go.Figure:
+    fig = go.Figure()
+    if ret_panel.empty:
+        return fig
+
+    final_abs = ret_panel.ffill().iloc[-1].abs().sort_values(ascending=False)
+    high_dispersion = final_abs.iloc[0] >= 3 * max(final_abs.median(), 1.0) and final_abs.iloc[0] >= 40
+    secondary_names = set(final_abs.head(max(1, len(final_abs) // 3)).index) if high_dispersion else set()
+
+    for col in ret_panel.columns:
+        use_secondary = col in secondary_names
+        fig.add_trace(
+            go.Scatter(
+                x=ret_panel.index,
+                y=ret_panel[col],
+                mode="lines",
+                name=col + (" (RHS)" if use_secondary else ""),
+                yaxis="y2" if use_secondary else "y",
+            )
+        )
+
+    layout = {
+        "title": "Cumulative Performance (%)",
+        "xaxis": {"title": "Date"},
+        "yaxis": {"title": "Return %"},
+        "legend": {"orientation": "h", "y": 1.06},
+    }
+    if high_dispersion:
+        layout["yaxis2"] = {"title": "Return % (RHS)", "overlaying": "y", "side": "right", "showgrid": False}
+    fig.update_layout(**layout)
+    return fig
 
 
 def preset_dates(preset: str) -> tuple[date, date]:
@@ -87,6 +126,7 @@ corr = correlation_matrix(returns)
 drawdowns = drawdown_from_prices(prices)
 normalized = normalize_base_100(prices)
 roll_vol = rolling_volatility(returns, window=20)
+return_pct = cumulative_return_pct(prices)
 
 fred_key = st.secrets.get("FRED_API_KEY", None)
 yields = fetch_fred_series(fred_map, start_date, end_date, fred_key)
@@ -137,21 +177,25 @@ with tab1:
 
         if not spread_proxy.empty:
             st.caption("Credit spread change proxies using ETF total-return differentials.")
-            st.dataframe(spread_proxy.style.format({"Value": "{:.2f}"}), use_container_width=True)
+            st.dataframe(spread_proxy.reset_index().rename(columns={"index": "Proxy"}), use_container_width=True, hide_index=True, column_config={"Value": st.column_config.NumberColumn("Value", format="%.2f")})
 
         st.download_button("Download summary CSV", data=summary.to_csv().encode("utf-8"), file_name="summary.csv")
         st.download_button("Download aligned prices CSV", data=prices.to_csv().encode("utf-8"), file_name="prices_panel.csv")
 
 with tab2:
     if not prices.empty:
-        plot_df = normalized if chart_mode.startswith("Normalized") else prices
-        if chart_mode == "Absolute Prices":
-            st.warning("Absolute prices can distort multi-asset comparison due to scale differences.")
-        fig = go.Figure()
-        for col in plot_df.columns:
-            fig.add_trace(go.Scatter(x=plot_df.index, y=plot_df[col], mode="lines", name=col))
-        fig.update_layout(title="Multi-Asset Comparison", yaxis_title="Base 100" if chart_mode.startswith("Normalized") else "Price")
-        st.plotly_chart(fig, use_container_width=True)
+        if chart_mode.startswith("Normalized"):
+            fig = build_return_chart_with_dynamic_axes(return_pct)
+            st.plotly_chart(fig, use_container_width=True)
+            if "yaxis2" in fig.layout:
+                st.info("High return dispersion detected. Top-magnitude assets are shown on a secondary axis to preserve visibility.")
+        else:
+            st.warning("Absolute prices can distort multi-asset comparison due to scale differences. Prefer normalized/percentage view for cross-asset analysis.")
+            fig = go.Figure()
+            for col in prices.columns:
+                fig.add_trace(go.Scatter(x=prices.index, y=prices[col], mode="lines", name=col))
+            fig.update_layout(title="Absolute Price Comparison", yaxis_title="Price")
+            st.plotly_chart(fig, use_container_width=True)
 
         single_asset = st.selectbox("Single-asset detail", options=list(prices.columns))
         col1, col2 = st.columns(2)
@@ -177,7 +221,7 @@ with tab3:
         st.session_state.report_md = ""
 
     st.session_state.report_md = st.text_area("Editable Markdown report", value=st.session_state.report_md, height=500)
-    html_report = markdown_to_basic_html(st.session_state.report_md)
+    html_report = markdown_to_basic_html(st.session_state.report_md, summary_df=summary, universe=universe)
     st.session_state.report_html = html_report
     with st.expander("HTML Preview"):
         st.components.v1.html(html_report, height=400, scrolling=True)
