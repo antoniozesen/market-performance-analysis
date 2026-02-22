@@ -86,7 +86,7 @@ def _report_en(start_date: date, end_date: date, summary: pd.DataFrame, yields_d
     pairs = _pair_lines(summary)
 
     return f"""# Global Market Monitor Report
-**Period:** {start_date:%d %B %Y} to {end_date:%d %B %Y}
+**Period:** {start_date:%Y-%m-%d} to {end_date:%Y-%m-%d}
 
 ## EUROPEAN MARKETS
 European markets showed differentiated performance over the selected window. The strongest benchmarks were {_fmt(eu_idx_top)}, while the weakest prints were {_fmt(eu_idx_bottom)}.
@@ -134,7 +134,7 @@ def _report_es(start_date: date, end_date: date, summary: pd.DataFrame, yields_d
     pairs = _pair_lines(summary)
 
     return f"""# Informe Global Market Monitor
-**Periodo:** {start_date:%d %B %Y} a {end_date:%d %B %Y}
+**Periodo:** {start_date:%Y-%m-%d} a {end_date:%Y-%m-%d}
 
 ## MERCADOS EUROPEOS
 Los mercados europeos mostraron evolución diferenciada en el periodo. Los índices líderes fueron {_fmt(eu_idx_top)}, mientras que los más débiles fueron {_fmt(eu_idx_bottom)}.

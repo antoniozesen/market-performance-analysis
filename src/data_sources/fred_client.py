@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 import streamlit as st
@@ -14,14 +14,17 @@ except Exception:  # pragma: no cover
 
 @st.cache_data(show_spinner=False, ttl=3600)
 def fetch_fred_series(
-    fred_mapping: Dict[str, str], start_date: date, end_date: date, api_key: Optional[str]
+    fred_mapping: Dict[str, List[str]], start_date: date, end_date: date, api_key: Optional[str]
 ) -> pd.DataFrame:
     if not api_key or Fred is None or not fred_mapping:
         return pd.DataFrame()
 
     client = Fred(api_key=api_key)
     out = {}
-    for label, series_id in fred_mapping.items():
+    for label, series_ids in fred_mapping.items():
+        if not series_ids:
+            continue
+        series_id = series_ids[0]
         try:
             s = client.get_series(series_id, observation_start=start_date, observation_end=end_date)
             s = pd.Series(s, name=label).dropna()
