@@ -120,17 +120,20 @@ with tab1:
             heat = px.imshow(corr, text_auto=".2f", aspect="auto", title="Correlation Matrix (Daily Returns)")
             st.plotly_chart(heat, use_container_width=True)
 
-        styled = summary.style.format(
-            {
-                "Total Return %": "{:.2f}",
-                "Annualized Return %": "{:.2f}",
-                "Volatility %": "{:.2f}",
-                "Max Drawdown %": "{:.2f}",
-                "Best Day %": "{:.2f}",
-                "Worst Day %": "{:.2f}",
-            }
-        ).background_gradient(cmap="RdYlGn", subset=["Total Return %"])
-        st.dataframe(styled, use_container_width=True)
+        display_summary = summary.reset_index().rename(columns={"index": "Asset"})
+        st.dataframe(
+            display_summary,
+            use_container_width=True,
+            hide_index=True,
+            column_config={
+                "Total Return %": st.column_config.NumberColumn("Total Return %", format="%.2f"),
+                "Annualized Return %": st.column_config.NumberColumn("Annualized Return %", format="%.2f"),
+                "Volatility %": st.column_config.NumberColumn("Volatility %", format="%.2f"),
+                "Max Drawdown %": st.column_config.NumberColumn("Max Drawdown %", format="%.2f"),
+                "Best Day %": st.column_config.NumberColumn("Best Day %", format="%.2f"),
+                "Worst Day %": st.column_config.NumberColumn("Worst Day %", format="%.2f"),
+            },
+        )
 
         if not spread_proxy.empty:
             st.caption("Credit spread change proxies using ETF total-return differentials.")
