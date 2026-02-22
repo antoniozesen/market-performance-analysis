@@ -22,15 +22,90 @@ st.set_page_config(page_title="Global Market Monitor", layout="wide")
 st.markdown(
     """
     <style>
-    .stApp { background: #ffffff !important; color: #111111 !important; }
-    .main .block-container { background: #ffffff !important; }
-    [data-testid="stSidebar"] { background: #fbfbfc !important; border-right: 1px solid #efefef; }
-    [data-testid="stHeader"] { background: #ffffff !important; }
-    [data-testid="stMetric"] { background: #ffffff; border: 1px solid #f0f0f0; border-radius: 12px; padding: 8px 10px; }
-    [data-testid="stMetricLabel"], [data-testid="stMetricValue"] { color: #111111 !important; }
-    [data-baseweb="select"], [data-baseweb="input"] input, textarea { background: #ffffff !important; color: #111111 !important; }
-    .stTabs [data-baseweb="tab"] { color: #1c1c1c !important; }
-    .stDataFrame, .stTable { background: #ffffff !important; }
+    :root {
+      --bg-main: #ffffff;
+      --bg-soft: #fcfcfd;
+      --bg-soft-2: #f7f8fa;
+      --text-main: #111827;
+      --text-muted: #374151;
+      --border-soft: #e5e7eb;
+    }
+
+    .stApp {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+    }
+
+    .main .block-container {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+    }
+
+    [data-testid="stHeader"] {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+    }
+
+    [data-testid="stSidebar"] {
+      background: var(--bg-soft) !important;
+      border-right: 1px solid var(--border-soft);
+      color: var(--text-main) !important;
+    }
+
+    h1, h2, h3, h4, h5, h6, p, span, label, div {
+      color: var(--text-main);
+    }
+
+    [data-testid="stMetric"] {
+      background: var(--bg-soft) !important;
+      border: 1px solid var(--border-soft) !important;
+      border-radius: 12px;
+      padding: 8px 10px;
+    }
+
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricValue"],
+    [data-testid="stMetricDelta"] {
+      color: var(--text-main) !important;
+    }
+
+    [data-baseweb="input"],
+    [data-baseweb="select"],
+    [data-baseweb="textarea"],
+    textarea,
+    input {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+      border-color: var(--border-soft) !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+      background: var(--bg-soft-2) !important;
+      border-radius: 10px;
+      padding: 4px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+      color: var(--text-muted) !important;
+      background: transparent !important;
+    }
+
+    .stTabs [aria-selected="true"] {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+      border-radius: 8px;
+    }
+
+    .stDataFrame, .stTable {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+    }
+
+    button[kind="secondary"] {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+      border: 1px solid var(--border-soft) !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
