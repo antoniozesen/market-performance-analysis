@@ -41,6 +41,34 @@ st.markdown(
       color: var(--text-main) !important;
     }
 
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"] {
+      background: var(--bg-main) !important;
+      color: var(--text-main) !important;
+    }
+
+    [data-testid="stExpander"],
+    [data-testid="stForm"],
+    [data-testid="stAlert"],
+    [data-testid="stNotificationContentInfo"],
+    [data-testid="stNotificationContentSuccess"],
+    [data-testid="stNotificationContentWarning"],
+    [data-testid="stNotificationContentError"] {
+      background: var(--bg-soft) !important;
+      color: var(--text-main) !important;
+      border-color: var(--border-soft) !important;
+    }
+
+    .stMarkdown, .stMarkdown p, .stMarkdown li, .stCaption {
+      color: var(--text-main) !important;
+    }
+
+    pre, code {
+      background: #f8fafc !important;
+      color: #0f172a !important;
+    }
+
     [data-testid="stHeader"] {
       background: var(--bg-main) !important;
       color: var(--text-main) !important;

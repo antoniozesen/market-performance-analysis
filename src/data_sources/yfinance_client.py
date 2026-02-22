@@ -27,13 +27,14 @@ def fetch_prices(
     if not label_to_tickers:
         return PriceFetchResult(prices=pd.DataFrame(), failed=[])
 
-    series: Dict[str, pd.Series] = {}
+    series_map: Dict[str, pd.Series] = {}
     failed_labels: List[str] = []
 
     for label, tickers in label_to_tickers.items():
         candidates = [tickers] if isinstance(tickers, str) else tickers
         candidates = [x for x in candidates if x]
-        found = None
+
+        found_series: pd.Series | None = None
         for ticker in candidates:
             try:
                 data = yf.download(
@@ -44,29 +45,61 @@ def fetch_prices(
                     progress=False,
                     threads=True,
                 )
-                if data.empty:
+                if data is None or getattr(data, "empty", True):
                     continue
-                col_order = ["Adj Close", "Close"] if prefer_adj_close else ["Close", "Adj Close"]
-                chosen = next((c for c in col_order if c in data.columns), None)
-                if not chosen:
+
+                extracted = _extract_price_series(data, prefer_adj_close=prefer_adj_close)
+                if extracted is None or extracted.empty:
                     continue
-                s = data[chosen].dropna().copy()
-                if s.empty:
-                    continue
-                found = s
+
+                found_series = extracted
                 break
             except Exception:
                 continue
 
-        if found is None:
+        if found_series is None:
             failed_labels.append(label)
         else:
-            series[label] = found
+            series_map[label] = found_series
 
-    panel = pd.DataFrame(series).sort_index() if series else pd.DataFrame()
-    if not panel.empty:
-        panel.index = pd.to_datetime(panel.index).tz_localize(None)
+    if not series_map:
+        return PriceFetchResult(prices=pd.DataFrame(), failed=sorted(set(failed_labels)))
+
+    panel = pd.concat(series_map, axis=1).sort_index()
+    panel.index = pd.to_datetime(panel.index).tz_localize(None)
     return PriceFetchResult(prices=panel, failed=sorted(set(failed_labels)))
+
+
+def _extract_price_series(data: pd.DataFrame, prefer_adj_close: bool) -> pd.Series | None:
+    col_order = ["Adj Close", "Close"] if prefer_adj_close else ["Close", "Adj Close"]
+
+    chosen_col = next((c for c in col_order if c in data.columns), None)
+    if chosen_col is not None:
+        s = data[chosen_col]
+    else:
+        # Fallback for unusual column structures
+        if isinstance(data, pd.Series):
+            s = data
+        elif data.shape[1] == 1:
+            s = data.iloc[:, 0]
+        else:
+            return None
+
+    if not isinstance(s, pd.Series):
+        try:
+            s = pd.Series(s)
+        except Exception:
+            return None
+
+    s = pd.to_numeric(s, errors="coerce").dropna()
+    if s.empty:
+        return None
+
+    # Guard against scalar-like accidental extraction
+    if s.index.nlevels == 0 or len(s.index) == 0:
+        return None
+
+    return s
 
 
 def parse_custom_tickers(csv_text: str) -> Dict[str, str]:
