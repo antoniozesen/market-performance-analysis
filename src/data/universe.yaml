@@ -1,0 +1,80 @@
+INDICES:
+  EURO STOXX 600: "^STOXX"
+  DAX: "^GDAXI"
+  CAC 40: "^FCHI"
+  IBEX: "^IBEX"
+  FTSE 100: "^FTSE"
+  FTSE MIB: "FTSEMIB.MI"
+  S&P 500: "^GSPC"
+  NASDAQ: "^IXIC"
+  Dow Jones: "^DJI"
+  Russell 2000: "^RUT"
+  Nikkei 225: "^N225"
+  Hang Seng: "^HSI"
+
+STYLE ETFs:
+  US Value: "IVE"
+  US Growth: "IVW"
+  EU Value: "CV9.PA"
+  EU Growth: "CG9.PA"
+
+EU SECTORS:
+  EU Financials: "ESIF.L"
+  EU Materials: "EXV6.DE"
+  EU Health Care: "HLTH.L"
+  EU Energy: "ESIE.F"
+  EU Consumer Staples: "ESIS.F"
+  EU Industrials: "ESIN.L"
+  EU Technology: "EXV3.DE"
+  EU Consumer Discretionary: "ESIC.F"
+  EU Banks: "EXV1.DE"
+  EU Communication Services: "EXH6.DE"
+  EU Utilities: "EXH9.DE"
+
+US SECTORS:
+  US Technology: "XLK"
+  US Health Care: "XLV"
+  US Financials: "XLF"
+  US Consumer Discretionary: "XLY"
+  US Consumer Staples: "XLP"
+  US Industrials: "XLI"
+  US Energy: "XLE"
+  US Utilities: "XLU"
+  US Materials: "XLB"
+  US Real Estate: "XLRE"
+  US Communication Services: "XLC"
+
+CURRENCIES:
+  EUR/USD: "EURUSD=X"
+  EUR/GBP: "EURGBP=X"
+  EUR/JPY: "EURJPY=X"
+  USD/JPY: "USDJPY=X"
+  GBP/USD: "GBPUSD=X"
+  USD/CHF: "USDCHF=X"
+
+COMMODITIES:
+  Gold: "GC=F"
+  Silver: "SI=F"
+  Brent Crude: "BZ=F"
+  WTI Crude: "CL=F"
+  Natural Gas: "NG=F"
+  Copper: "HG=F"
+
+BOND ETFs:
+  EU Govt Bonds 1-3Y: "EM13.MI"
+  EU Govt Bonds 3-7Y: "CBE7.AS"
+  EU Govt Bonds 7-10Y: "LYXD.DE"
+  EU IG Corporate: "IEAC.L"
+  EU HY Corporate: "IHYG.L"
+  US Govt Bonds 1-3Y: "SHY"
+  US Govt Bonds 3-7Y: "IEI"
+  US Govt Bonds 7-10Y: "IEF"
+  US Govt Bonds 20Y+: "TLT"
+  US IG Corporate: "LQD"
+  US HY Corporate: "HYG"
+
+YIELDS:
+  US 3M Yield: "DTB3"
+  US 2Y Yield: "DGS2"
+  US 10Y Yield: "DGS10"
+  US 30Y Yield: "DGS30"
